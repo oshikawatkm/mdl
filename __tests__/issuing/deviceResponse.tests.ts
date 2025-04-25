@@ -235,4 +235,16 @@ describe('issuing a device response', () => {
       expect(parsedDocument.deviceSigned.deviceAuth.deviceSignature?.payload).toBeNull();
     });
   });
+
+  describe('should parse form JSON', () => {
+    it('should correctly rehydrate MDoc from JSON', () => {
+      const json = JSON.parse(JSON.stringify(mdoc));
+      const restored = MDoc.fromJSON(json);
+    
+      expect(() => {
+        DeviceResponse.from(restored);
+      }).not.toThrow();
+    });
+  });
+    
 });
