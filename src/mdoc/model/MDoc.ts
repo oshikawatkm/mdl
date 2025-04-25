@@ -36,36 +36,35 @@ export class MDoc {
       status: this.status,
     });
   }
-  
-  static fromJSON(json: any): MDoc {
-    const documents = json.documents.map((docJson: any) => {
-      // Reconstruct Buffers
-      const auth = docJson.issuerSigned.issuerAuth;
-      ['payload', 'signature', 'encodedProtectedHeaders'].forEach((key) => {
-        if (auth[key]?.type === 'Buffer') {
-          auth[key] = Buffer.from(auth[key].data);
-        }
-      });
-  
-      // Re-add method
-      auth.getContentForEncoding = function () {
-        return {
-          protected: this.encodedProtectedHeaders,
-          unprotected: this.unprotectedHeaders,
-          payload: this.payload,
-          signature: this.signature,
-        };
-      };
-  
-      // Reconstruct IssuerSignedDocument
-      const issuerSigned = {
-        ...docJson.issuerSigned,
-        issuerAuth: auth,
-      };
-  
-      return new IssuerSignedDocument(docJson.docType, issuerSigned);
+
+static fromJSON(json: any): MDoc {
+  const documents = json.documents.map((docJson: any) => {
+    const auth = docJson.issuerSigned.issuerAuth;
+
+    ['payload', 'signature', 'encodedProtectedHeaders'].forEach((key) => {
+      if (auth[key]?.type === 'Buffer') {
+        auth[key] = Buffer.from(auth[key].data);
+      }
     });
-  
-    return new MDoc(documents);
-  }
+
+    auth.getContentForEncoding = function () {
+      return {
+        protected: this.encodedProtectedHeaders,
+        unprotected: this.unprotectedHeaders,
+        payload: this.payload,
+        signature: this.signature,
+      };
+    };
+
+    const issuerSigned = {
+      ...docJson.issuerSigned,
+      issuerAuth: auth,
+    };
+
+    return new IssuerSignedDocument(docJson.docType, issuerSigned);
+  });
+
+  return new MDoc(documents);
+}
+
 }
