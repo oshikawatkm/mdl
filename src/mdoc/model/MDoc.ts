@@ -14,6 +14,20 @@ export enum MDocStatus {
   CBORValidationError = 12,
 }
 
+function deepRestoreBuffers(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(deepRestoreBuffers);
+  } else if (obj && typeof obj === 'object') {
+    if (obj.type === 'Buffer' && Array.isArray(obj.data)) {
+      return Buffer.from(obj.data);
+    }
+    for (const key of Object.keys(obj)) {
+      obj[key] = deepRestoreBuffers(obj[key]);
+    }
+  }
+  return obj;
+}
+
 export class MDoc {
   constructor(
     public readonly documents: IssuerSignedDocument[] = [],
@@ -37,17 +51,12 @@ export class MDoc {
     });
   }
 
-static fromJSON(json: any): MDoc {
-  const documents = json.documents.map((docJson: any) => {
-    const auth = docJson.issuerSigned.issuerAuth;
-
-    ['payload', 'signature', 'encodedProtectedHeaders'].forEach((key) => {
-      if (auth[key]?.type === 'Buffer') {
-        auth[key] = Buffer.from(auth[key].data);
-      }
-    });
-
-    auth.getContentForEncoding = function () {
+  static fromJSONDocument(json: any): MDoc {
+    // 再帰的に全体を Buffer に復元
+    json.issuerSigned.issuerAuth = deepRestoreBuffers(json.issuerSigned.issuerAuth);
+  
+    // getContentForEncoding を復元
+    json.issuerSigned.issuerAuth.getContentForEncoding = function () {
       return {
         protected: this.encodedProtectedHeaders,
         unprotected: this.unprotectedHeaders,
@@ -55,16 +64,15 @@ static fromJSON(json: any): MDoc {
         signature: this.signature,
       };
     };
-
+  
     const issuerSigned = {
-      ...docJson.issuerSigned,
-      issuerAuth: auth,
+      ...json.issuerSigned,
+      issuerAuth: json.issuerSigned.issuerAuth,
     };
+  
+    const document = new IssuerSignedDocument(json.docType, issuerSigned);
+    return new MDoc([document]);
+  }
 
-    return new IssuerSignedDocument(docJson.docType, issuerSigned);
-  });
-
-  return new MDoc(documents);
-}
 
 }

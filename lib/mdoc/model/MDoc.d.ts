@@ -19,5 +19,5 @@ export declare class MDoc {
     constructor(documents?: IssuerSignedDocument[], version?: string, status?: MDocStatus, documentErrors?: DocumentError[]);
     addDocument(document: IssuerSignedDocument): void;
     encode(): Buffer;
-    static fromJSON(json: any): MDoc;
+    static fromJSONDocument(json: any): MDoc;
 }
